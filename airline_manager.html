@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airline Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <h1>Airline Manager</h1>
+        <div class="subtitle">Search, filter, and explore airlines</div>
+      </div>
+      <button class="btn" onclick="window.open('airline_dashboard_v2.html','_blank')">
+        📊 Open Analytics Dashboard
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Filters -->
+  <section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+    <div class="card">
+      <label for="search">Name</label>
+      <input id="search" type="text" placeholder="Start typing name..." />
+    </div>
+    <div class="card">
+      <label for="country">Country</label>
+      <select id="country"><option value="">All</option></select>
+    </div>
+    <div class="card">
+      <label for="subregion">Subregion</label>
+      <select id="subregion"><option value="">All</option></select>
+    </div>
+    <div class="card">
+      <label for="type">Type</label>
+      <select id="type"><option value="">All</option></select>
+    </div>
+    <div class="card">
+      <label for="status">Status</label>
+      <select id="status"><option value="">All</option></select>
+    </div>
+    <div class="card">
+      <label for="category">Category</label>
+      <select id="category"><option value="">All</option></select>
+    </div>
+  </section>
+
+  <!-- Results Table -->
+  <div class="card">
+    <h2 style="margin-top:0">Airlines</h2>
+    <div class="footer">
+      <div class="muted" id="resultCount">0 results</div>
+      <button class="btn secondary" onclick="resetFilters()">Reset Filters</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>IATA</th>
+          <th>ICAO</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Country</th>
+          <th>Subregion</th>
+          <th>Category</th>
+          <th>Base</th>
+          <th>Fleet</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const state = { data: [], filtered: [] };
+
+const els = {
+  search: document.getElementById('search'),
+  country: document.getElementById('country'),
+  subregion: document.getElementById('subregion'),
+  type: document.getElementById('type'),
+  status: document.getElementById('status'),
+  category: document.getElementById('category'),
+  results: document.getElementById('results'),
+  resultCount: document.getElementById('resultCount')
+};
+
+// Load data
+async function loadData() {
+  try {
+    const res = await fetch('airlineData.json', { cache: 'no-store' });
+    const json = await res.json();
+    state.data = json.airlines || json;
+    populateFilters();
+    applyFilters();
+  } catch (err) {
+    console.error('Error loading data:', err);
+    alert('Could not load airlineData.json');
+  }
+}
+
+function uniqueSorted(arr) {
+  return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+
+// Populate dropdowns
+function populateFilters() {
+  const fields = ['country', 'subregion', 'type', 'status', 'category'];
+  fields.forEach(field => {
+    const select = els[field];
+    uniqueSorted(state.data.map(d => d[field])).forEach(val => {
+      const o = document.createElement('option');
+      o.value = val;
+      o.textContent = val;
+      select.appendChild(o);
+    });
+    select.addEventListener('change', applyFilters);
+  });
+  els.search.addEventListener('input', () => setTimeout(applyFilters, 200));
+}
+
+function applyFilters() {
+  const q = els.search.value.toLowerCase();
+  const c = els.country.value;
+  const s = els.subregion.value;
+  const t = els.type.value;
+  const st = els.status.value;
+  const cat = els.category.value;
+
+  state.filtered = state.data.filter(d =>
+    (!q || d.name?.toLowerCase().startsWith(q)) &&
+    (!c || d.country === c) &&
+    (!s || d.subregion === s) &&
+    (!t || d.type === t) &&
+    (!st || d.status === st) &&
+    (!cat || d.category === cat)
+  );
+
+  renderResults();
+}
+
+function renderResults() {
+  els.results.innerHTML = '';
+  state.filtered.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.name || '-'}</td>
+      <td>${d.iata || '-'}</td>
+      <td>${d.icao || '-'}</td>
+      <td>${d.type || '-'}</td>
+      <td>${d.status || '-'}</td>
+      <td>${d.country || '-'}</td>
+      <td>${d.subregion || '-'}</td>
+      <td>${d.category || '-'}</td>
+      <td>${d.base || '-'}</td>
+      <td>${Array.isArray(d.fleet) ? d.fleet.length : 0}</td>
+    `;
+    els.results.appendChild(tr);
+  });
+  els.resultCount.textContent = `${state.filtered.length} results`;
+}
+
+function resetFilters() {
+  els.search.value = '';
+  ['country','subregion','type','status','category'].forEach(id => els[id].value = '');
+  applyFilters();
+}
+
+loadData();
+</script>
+</body>
+</html>

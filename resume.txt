@@ -1,0 +1,140 @@
+🏠 index.html – Main Menu & System Hub
+
+	Purpose - Acts as the central navigation interface for the Aviation Suite. Provides links to all modules, checks data availability, and manages the suite’s visual themes.
+
+	Core Features
+		Displays suite title and subtitle
+		Live Data Status Bar
+		Uses JavaScript to fetch() airlineData.json and aircraftData.json
+		Shows ✅ Ready, ⚠️ Not Found, or ❌ Error in real time
+		Dynamic Theme Toggle
+		[🎨 Switch Theme] button switches between style_skyblue.css and style_flightops.css
+		Managed by themeToggle.js and stored in localStorage
+
+	App Grid
+		Each card links to one of the suite’s tools:
+		1	Airline Manager
+		2	Analytics Dashboard
+		3	Flight Cost Calculator
+		4	Charter Match
+
+	Dependencies
+		themeToggle.js – for theme switching
+		style_skyblue.css / style_flightops.css – for styling
+		airlineData.json, aircraftData.json – for live status checks
+
+
+################################################################################################
+
+
+🧭 airline_manager.html – Airline Database Manager
+
+	Purpose - Provides search, filtering, and browsing of airline data from airlineData.json.
+
+	Core Features
+		Search by name, country, region, subregion, type, and status
+		Dropdown filters auto-populated from the JSON file
+		Live filtering without reloading
+		Displays airline name, IATA/ICAO codes, country, type, category, and operational status
+		Summarized KPIs (active airlines, countries represented, category breakdowns)
+
+	Dependencies
+		airlineData.json – main data source
+		style.css (or style_skyblue.css) – for layout and visual design
+		Integrated into suite’s theme system (optional toggle can be added)
+
+
+################################################################################################
+
+
+📊 airline_dashboard.html – Analytics Dashboard
+
+	Purpose - Visualizes key metrics derived from the airline data: regional distribution, active vs. inactive status, and type breakdowns.
+
+	Core Features
+		Interactive filters (country, subregion, category, type)
+		Dynamic KPI recalculation when filters change
+		Visual summaries:
+		Total airlines
+		Active vs. inactive
+		Fleet types per region
+		Responsive grid and table layout
+		Works seamlessly with shared data
+
+	Dependencies
+		airlineData.json – data source
+		style.css or style_skyblue.css – theme styling
+
+
+################################################################################################
+
+⚖️ gc_calculator.html – Flight Cost Calculator
+
+	Purpose - Calculates multi-leg flight operating costs using aircraft performance data and real-world FX rates.
+
+	Core Features
+		Input: route (JFK-LHR-DXB), aircraft type, rates, and currency
+		Auto-hyphenation for route input (smart IATA segmentation)
+		Fetches distances via AirportGap API
+		Calculates for each leg:
+		Distance (NM)
+		Block time
+		Fuel burn (kg)
+		Cost breakdown (fuel, ACMI, nav, landing, handling, ground)
+		Generates analytics:
+		Cost per NM / Block Hour
+		Fuel per NM / Block Hour
+		Draws interactive route map (Leaflet.js)
+		Converts costs to selected currency using live FX rates (cached 24h)
+		Multi-table structured output:
+		Flight details per leg
+		Flight summary (aircraft, total fuel, distance, block hours)
+		Cost summary
+		Analytics summary
+		Airports & countries table
+		Integrated [🎨 Switch Theme] [← Main Menu] buttons
+
+	Dependencies
+		aircraftData.json – aircraft performance and rates
+		airlineData.json – optional operator lookups
+		themeToggle.js – theme management
+		style_skyblue.css / style_flightops.css – visual styling
+
+	External APIs:
+		AirportGap (distance API)
+		Open ER API (FX rates)
+		Leaflet.js – route map rendering
+
+################################################################################################
+
+🧩 charter_match.html – Charter Request Matching Tool
+
+	Purpose - Matches charter flight requests with available aircraft from the shared dataset.
+
+	Core Features
+		Input charter parameters (origin, destination, passenger count, aircraft type)
+		Filters aircraft by range, capacity, and operator region
+		Displays best-matching options with estimated operating costs (optional future integration with GC Calculator)
+		Placeholder version currently displays informational “Coming Soon” panel
+		Same layout and theme integration as other modules
+
+	Dependencies
+		aircraftData.json – fleet capabilities
+		airlineData.json – operators and regions
+		style_skyblue.css / style_flightops.css – unified theme
+
+
+################################################################################################
+
+🧠 themeToggle.js – Shared Theme Management
+	Purpose - Handles dynamic switching between the SkyBlue and Aviation Gold themes across all suite pages.
+
+	Core Functions
+		Detects saved theme from localStorage
+		Updates <link id="themeStylesheet"> dynamically
+		Changes toggle button text to reflect target theme
+		Exports a simple reusable function:
+			toggleTheme();
+			Default
+			Loads style_skyblue.css on first visit
+			Remembers last selection persistently

@@ -1,0 +1,208 @@
+/* =========================================================
+   Airline Manager & Dashboard Unified Style
+   Theme: SkyBlue Dark
+   Author: OpenAI GPT-5
+   ========================================================= */
+
+:root {
+  --bg:#0f172a;
+  --card:#111827;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --accent:#3b82f6;
+  --accent2:#22c55e;
+  --danger:#ef4444;
+  --chip:#1f2937;
+  --border:#374151;
+}
+
+/* ===== Base Styles ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Arial;
+  background: linear-gradient(180deg, var(--bg), #0b1220);
+  color: var(--text);
+}
+
+/* ===== Header ===== */
+header {
+  background: rgba(15,23,42,0.9);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+h1 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn.secondary {
+  background: #1f2937;
+  color: var(--text);
+}
+
+.btn.secondary:hover {
+  background: #374151;
+}
+
+.btn.danger {
+  background: var(--danger);
+}
+
+.btn.danger:hover {
+  background: #dc2626;
+}
+
+/* ===== Layout ===== */
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+/* ===== Cards ===== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.kpi {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* ===== Inputs ===== */
+input, select {
+  background: #0b1020;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* ===== Table ===== */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  margin-top: 16px;
+}
+
+thead th {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 6px;
+}
+
+tbody tr {
+  background: var(--card);
+  border: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+tbody tr:hover {
+  background: #1b2435;
+}
+
+tbody td {
+  padding: 8px 10px;
+}
+
+tbody tr td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+tbody tr td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* ===== Utility ===== */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.pill {
+  background: var(--chip);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  header {
+    padding: 14px;
+  }
+  .wrap {
+    padding: 14px;
+  }
+  table {
+    font-size: 0.9rem;
+  }
+  .btn {
+    padding: 8px 10px;
+  }
+}

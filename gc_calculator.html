@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Cost Calculator — Aviation Suite</title>
+  <link id="themeStylesheet" rel="stylesheet" href="style_skyblue.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+<header>
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h1>Flight Cost Calculator</h1>
+      <div class="subtitle">Multi-leg ACMI & fuel cost calculator with FX rates</div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="themeToggleBtn" class="btn secondary" onclick="toggleTheme()">🎨 Switch to Gold Theme</button>
+      <button class="btn secondary" onclick="window.location.href='index.html'">← Main Menu</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card"><h2>Calculator UI Placeholder</h2><p>Existing calculator content here (unchanged).</p></div>
+</main>
+
+<footer>© Aviation Suite 2025 — Flight Cost Calculator</footer>
+<script src="themeToggle.js"></script>
+</body>
+</html>
+
+  <!-- Inputs -->
+  <div class="card">
+    <h2 class="section-title">Flight Inputs</h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+      <div>
+        <label>Route (e.g. JFK-ORD-LAX)</label>
+        <input id="route" type="text" placeholder="Enter route (IATA codes)" />
+        <div class="hint">Use 3-letter IATA codes; hyphens auto-insert.</div>
+      </div>
+      <div>
+        <label>Aircraft Code</label>
+        <input id="aircraft" type="text" placeholder="e.g. B738" maxlength="5" />
+      </div>
+      <div>
+        <label>Fuel Price (USD/kg)</label>
+        <input id="fuelPrice" type="number" step="0.01" value="1.07" />
+      </div>
+      <div>
+        <label>ACMI Rate (USD/hr)</label>
+        <input id="acmiRate" type="number" step="10" />
+      </div>
+      <div>
+        <label>Nav Fee (USD/NM)</label>
+        <input id="navRate" type="number" step="0.1" value="4" />
+      </div>
+      <div>
+        <label>Landing Fee (USD/ton)</label>
+        <input id="landingRate" type="number" step="1" value="15" />
+      </div>
+      <div>
+        <label>Handling Fee (USD/ton)</label>
+        <input id="handlingRate" type="number" step="1" value="10" />
+      </div>
+      <div>
+        <label>Ground Service (USD/stop)</label>
+        <input id="groundFee" type="number" step="10" value="500" />
+      </div>
+      <div>
+        <label>Currency</label>
+        <select id="currency">
+          <option value="USD" selected>USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+          <option value="CAD">CAD</option>
+          <option value="AUD">AUD</option>
+          <option value="JPY">JPY</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button id="calcBtn" class="btn">Calculate</button>
+      <button id="resetBtn" class="btn secondary" style="display:none;">New Query</button>
+      <span id="fxStatus" class="hint"></span>
+    </div>
+  </div>
+
+  <!-- Table 0 — Flight Details (per leg) -->
+  <div class="card">
+    <h2 class="section-title">Table 0 — Flight Details</h2>
+    <div class="hint">Per-leg distance and block time. Totals at the bottom.</div>
+    <div class="overflow">
+      <table>
+        <thead>
+          <tr>
+            <th>From</th><th>To</th><th class="right">Distance (NM)</th><th class="right">Block Time</th>
+          </tr>
+        </thead>
+        <tbody id="flightDetailsBody"></tbody>
+        <tfoot id="flightDetailsFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Results grid -->
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;">
+    <!-- Table 1 — Flight Summary -->
+    <div class="card">
+      <h2 class="section-title">Table 1 — Flight Summary</h2>
+      <table>
+        <tbody id="summaryBody">
+          <tr><td>Aircraft Code</td><td>—</td></tr>
+          <tr><td>Aircraft Model</td><td>—</td></tr>
+          <tr><td>MTOW</td><td>—</td></tr>
+          <tr><td>ACMI Rate (per Block Hour)</td><td>—</td></tr>
+          <tr><td>Total Distance</td><td>—</td></tr>
+          <tr><td>Total Block Time</td><td>—</td></tr>
+          <tr><td>Total Fuel Burn</td><td>—</td></tr>
+          <tr><td>Total Cost</td><td>—</td></tr>
+          <tr><td>Warnings</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Table 2 — Cost Summary -->
+    <div class="card">
+      <h2 class="section-title">Table 2 — Cost Summary</h2>
+      <table>
+        <thead><tr><th>Cost Component</th><th class="right">Total</th></tr></thead>
+        <tbody id="costSummaryBody">
+          <tr><td>Fuel Cost</td><td class="right">—</td></tr>
+          <tr><td>ACMI Cost</td><td class="right">—</td></tr>
+          <tr><td>Navigation Charges</td><td class="right">—</td></tr>
+          <tr><td>Landing Fees</td><td class="right">—</td></tr>
+          <tr><td>Handling Fees</td><td class="right">—</td></tr>
+          <tr><td>Ground Service Fees</td><td class="right">—</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td><strong>Grand Total</strong></td><td id="grandTotalCell" class="right">—</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Table 3 — Analytics Summary -->
+    <div class="card">
+      <h2 class="section-title">Table 3 — Analytics Summary</h2>
+      <table>
+        <tbody id="analyticsBody">
+          <tr><td>Cost per NM</td><td class="right">—</td></tr>
+          <tr><td>Cost per Block Hour</td><td class="right">—</td></tr>
+          <tr><td>Fuel per NM</td><td class="right">—</td></tr>
+          <tr><td>Fuel per Block Hour</td><td class="right">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Table 4 — Airports & Countries -->
+    <div class="card">
+      <h2 class="section-title">Table 4 — Airports & Countries</h2>
+      <div class="overflow">
+        <table>
+          <thead><tr><th>Airport Code</th><th>Airport Name</th><th>Country</th><th>City</th></tr></thead>
+          <tbody id="airportTBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="card">
+    <h2 class="section-title">Route Map</h2>
+    <div id="map"></div>
+  </div>
+
+</main>
+
+<footer class="muted" style="text-align:center;padding:12px;">© Aviation Suite 2025 — Flight Cost Calculator v2</footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+// ===== State =====
+let aircraftInfo = {};
+let fxRates = { USD: 1 }, fxTime = null;
+let map, routeLayer;
+let lastResult = null; // store USD-base computation for currency changes
+
+const fixedBlockMinutes = 30;
+const baseFuelPrice = 1.07;
+
+// ===== Load JSON =====
+async function loadJSON(){
+  try {
+    const a = await fetch('aircraftData.json'); const aj = await a.json(); aircraftInfo = aj.aircraft || {};
+  } catch(e){ alert('Error loading aircraftData.json'); }
+}
+loadJSON();
+
+// ===== FX (24h cache) =====
+async function fetchFX(){
+  try{
+    const cached = JSON.parse(localStorage.getItem('fx_cache')||'null');
+    const now = Date.now();
+    if(cached && now - cached.time < 24*3600*1000){
+      fxRates = cached.rates; fxTime = new Date(cached.time); renderFX(); return;
+    }
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if(data && data.result==='success'){
+      fxRates = data.rates; fxTime = new Date();
+      localStorage.setItem('fx_cache', JSON.stringify({time: Date.now(), rates: fxRates}));
+      renderFX();
+    } else throw new Error('FX API error');
+  }catch(e){ fxRates = { USD: 1 }; fxTime = null; renderFX(true); }
+}
+fetchFX();
+function renderFX(failed=false){
+  const el=document.getElementById('fxStatus');
+  el.textContent = failed ? 'FX offline (USD only)' :
+    (fxTime ? ('FX cached: '+fxTime.toLocaleString()) : 'FX ready');
+}
+function getRate(){ const cur=document.getElementById('currency').value||'USD'; return [cur, fxRates[cur]||1]; }
+function money(v){ const [cur, r] = getRate(); return new Intl.NumberFormat('en-US',{style:'currency',currency:cur,maximumFractionDigits:0}).format(v*r); }
+function formatNum(n, d=0){ return Number(n).toLocaleString('en-US',{maximumFractionDigits:d}); }
+function formatBlock(h){ const H = Math.floor(h); const M = Math.round((h-H)*60); return `${H} hr ${M} min`; }
+
+// ===== Route helper (auto hyphens) =====
+const routeInput = document.getElementById('route');
+routeInput.addEventListener('input', () => {
+  let v = routeInput.value.replace(/-/g,'').toUpperCase().replace(/[^A-Z]/g,'');
+  let out=''; for(let i=0;i<v.length;i+=3){ out += v.substring(i,i+3)+'-'; }
+  if(v.length % 3 === 0 && out.endsWith('-')) out = out.slice(0,-1);
+  routeInput.value = out;
+});
+
+// ===== Calculate distances & costs (USD base) =====
+async function fetchLeg(from, to){
+  const res = await fetch('https://airportgap.com/api/airports/distance',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer iHPosKuEeLi2rJHtUNxNJtKo'},
+    body: JSON.stringify({from, to})
+  });
+  if(!res.ok) throw new Error('Distance API error');
+  return res.json();
+}
+
+async function calculate(){
+  // Validate
+  let route = document.getElementById('route').value.trim().toUpperCase();
+  if(route.endsWith('-')) route = route.slice(0,-1);
+  if(!/^[A-Z]{3}(-[A-Z]{3})+$/.test(route)){ alert('Invalid route format'); return; }
+  const points = route.split('-');
+
+  const code = document.getElementById('aircraft').value.trim().toUpperCase();
+  const ac = aircraftInfo[code];
+  if(!ac){ alert('Unknown aircraft code'); return; }
+
+  const fuelPrice = parseFloat(document.getElementById('fuelPrice').value)||baseFuelPrice;
+  const acmiRate  = parseFloat(document.getElementById('acmiRate').value)||ac.acmiRate;
+  const navRate   = parseFloat(document.getElementById('navRate').value);
+  const landRate  = parseFloat(document.getElementById('landingRate').value);
+  const handRate  = parseFloat(document.getElementById('handlingRate').value);
+  const groundFee = parseFloat(document.getElementById('groundFee').value);
+
+  let totalNM=0, totalFlight=0, totalBlock=0, totalFuel=0;
+  let totalFuelCost=0, totalAcmi=0, totalNav=0, totalLanding=0, totalHandling=0, totalGround=0;
+  let warning=false;
+
+  if(!map){
+    map=L.map('map').setView([20,0],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+  }
+  if(routeLayer) routeLayer.remove();
+  const latlngs=[]; const airportsInfo=[]; const uniqueAirports=new Map(); const flightDetails=[];
+
+  for(let i=0;i<points.length-1;i++){
+    const from=points[i], to=points[i+1];
+    try{
+      const data = await fetchLeg(from,to);
+      const a = data.data.attributes;
+      const nm = a.nautical_miles;
+
+      const fHrs = nm / ac.speed;
+      const bHrs = fHrs + fixedBlockMinutes/60;
+      const fuel = fHrs * ac.fuelBurnKgPerHr;
+
+      const fuelCost = fuel * fuelPrice;
+      const acmiCost = bHrs * acmiRate;
+      const navCost  = nm * Math.pow(ac.maxTakeoffWeightKg/1000/50, 0.7) * navRate;
+      const landing  = (ac.maxTakeoffWeightKg/1000) * landRate;
+      const handling = (ac.maxTakeoffWeightKg/1000) * handRate;
+      const ground   = groundFee;
+
+      totalNM += nm; totalFlight += fHrs; totalBlock += bHrs; totalFuel += fuel;
+      totalFuelCost += fuelCost; totalAcmi += acmiCost; totalNav += navCost;
+      totalLanding += landing; totalHandling += handling; totalGround += ground;
+
+      if(nm > ac.maxRangeNM) warning = true;
+
+      latlngs.push([a.from_airport.latitude, a.from_airport.longitude]);
+      if(i===points.length-2) latlngs.push([a.to_airport.latitude, a.to_airport.longitude]);
+
+      const fa=a.from_airport, ta=a.to_airport;
+      if(fa?.iata && !uniqueAirports.has(fa.iata)){
+        uniqueAirports.set(fa.iata,{code:fa.iata,name:fa.name,country:fa.country,city:fa.municipality||fa.city||''});
+      }
+      if(ta?.iata && !uniqueAirports.has(ta.iata)){
+        uniqueAirports.set(ta.iata,{code:ta.iata,name:ta.name,country:ta.country,city:ta.municipality||ta.city||''});
+      }
+
+      flightDetails.push({from,to,nm,blockHrs:bHrs});
+    }catch(e){ alert(`Error fetching ${from}-${to}: ${e.message}`); return; }
+  }
+
+  const grandTotal = totalFuelCost + totalAcmi + totalNav + totalLanding + totalHandling + totalGround;
+
+  lastResult = {
+    code, ac, acmiRate,
+    totals:{ totalNM, totalFlight, totalBlock, totalFuel, totalFuelCost, totalAcmi, totalNav, totalLanding, totalHandling, totalGround, grandTotal },
+    airportsInfo: Array.from(uniqueAirports.values()),
+    flightDetails,
+    warning
+  };
+
+  renderAll();
+
+  // Map
+  routeLayer = L.polyline(latlngs,{color:'#3b82f6'}).addTo(map);
+  map.fitBounds(routeLayer.getBounds());
+  latlngs.forEach((p,i)=> L.marker(p).addTo(map).bindPopup(points[i]||''));
+
+  // UI toggles
+  document.getElementById('calcBtn').style.display='none';
+  document.getElementById('resetBtn').style.display='inline-block';
+}
+
+function renderAll(){
+  if(!lastResult) return;
+  const { code, ac, acmiRate, totals, airportsInfo, flightDetails, warning } = lastResult;
+
+  // Table 0 — Flight Details
+  const fdB=document.getElementById('flightDetailsBody'), fdF=document.getElementById('flightDetailsFoot');
+  fdB.innerHTML='';
+  flightDetails.forEach(d=>{
+    fdB.innerHTML += `<tr>
+      <td>${d.from}</td><td>${d.to}</td>
+      <td class="right">${formatNum(d.nm)}</td>
+      <td class="right">${formatBlock(d.blockHrs)}</td>
+    </tr>`;
+  });
+  fdF.innerHTML = `<tr>
+    <td><strong>Total</strong></td><td>—</td>
+    <td class="right"><strong>${formatNum(totals.totalNM)}</strong></td>
+    <td class="right"><strong>${formatBlock(totals.totalBlock)}</strong></td>
+  </tr>`;
+
+  // Table 1 — Flight Summary
+  document.getElementById('summaryBody').innerHTML = `
+    <tr><td>Aircraft Code</td><td>${code}</td></tr>
+    <tr><td>Aircraft Model</td><td>${ac.model}</td></tr>
+    <tr><td>MTOW</td><td>${formatNum(ac.maxTakeoffWeightKg)} kg</td></tr>
+    <tr><td>ACMI Rate (per Block Hour)</td><td>${money(acmiRate)}</td></tr>
+    <tr><td>Total Distance</td><td>${formatNum(totals.totalNM)} NM</td></tr>
+    <tr><td>Total Block Time</td><td>${formatBlock(totals.totalBlock)}</td></tr>
+    <tr><td>Total Fuel Burn</td><td>${formatNum(totals.totalFuel)} kg</td></tr>
+    <tr><td>Total Cost</td><td>${money(totals.grandTotal)}</td></tr>
+    <tr><td>Warnings</td><td>${warning ? '<span class="warn">One or more legs exceed max range!</span>' : 'None'}</td></tr>
+  `;
+
+  // Table 2 — Cost Summary
+  document.getElementById('costSummaryBody').innerHTML = `
+    <tr><td>Fuel Cost</td><td class="right">${money(totals.totalFuelCost)}</td></tr>
+    <tr><td>ACMI Cost</td><td class="right">${money(totals.totalAcmi)}</td></tr>
+    <tr><td>Navigation Charges</td><td class="right">${money(totals.totalNav)}</td></tr>
+    <tr><td>Landing Fees</td><td class="right">${money(totals.totalLanding)}</td></tr>
+    <tr><td>Handling Fees</td><td class="right">${money(totals.totalHandling)}</td></tr>
+    <tr><td>Ground Service Fees</td><td class="right">${money(totals.totalGround)}</td></tr>
+  `;
+  document.getElementById('grandTotalCell').textContent = money(totals.grandTotal);
+
+  // Table 3 — Analytics
+  const costPerNM = totals.grandTotal / Math.max(1, totals.totalNM);
+  const costPerBH = totals.grandTotal / Math.max(0.01, totals.totalBlock);
+  const fuelPerNM = totals.totalFuel / Math.max(1, totals.totalNM);
+  const fuelPerBH = totals.totalFuel / Math.max(0.01, totals.totalBlock);
+  document.getElementById('analyticsBody').innerHTML = `
+    <tr><td>Cost per NM</td><td class="right">${money(costPerNM)}</td></tr>
+    <tr><td>Cost per Block Hour</td><td class="right">${money(costPerBH)}</td></tr>
+    <tr><td>Fuel per NM</td><td class="right">${fuelPerNM.toFixed(1)} kg</td></tr>
+    <tr><td>Fuel per Block Hour</td><td class="right">${fuelPerBH.toFixed(0)} kg</td></tr>
+  `;
+
+  // Table 4 — Airports
+  const aBody = document.getElementById('airportTBody'); aBody.innerHTML='';
+  airportsInfo.forEach(a=>{
+    aBody.innerHTML += `<tr>
+      <td>${a.code||'-'}</td><td>${a.name||'-'}</td><td>${a.country||'-'}</td><td>${a.city||'-'}</td>
+    </tr>`;
+  });
+}
+
+// ===== Reset =====
+function resetCalc(){
+  lastResult=null;
+  document.getElementById('flightDetailsBody').innerHTML='';
+  document.getElementById('flightDetailsFoot').innerHTML='';
+  document.getElementById('summaryBody').innerHTML=`
+    <tr><td>Aircraft Code</td><td>—</td></tr>
+    <tr><td>Aircraft Model</td><td>—</td></tr>
+    <tr><td>MTOW</td><td>—</td></tr>
+    <tr><td>ACMI Rate (per Block Hour)</td><td>—</td></tr>
+    <tr><td>Total Distance</td><td>—</td></tr>
+    <tr><td>Total Block Time</td><td>—</td></tr>
+    <tr><td>Total Fuel Burn</td><td>—</td></tr>
+    <tr><td>Total Cost</td><td>—</td></tr>
+    <tr><td>Warnings</td><td>—</td></tr>`;
+  document.getElementById('costSummaryBody').innerHTML=`
+    <tr><td>Fuel Cost</td><td class="right">—</td></tr>
+    <tr><td>ACMI Cost</td><td class="right">—</td></tr>
+    <tr><td>Navigation Charges</td><td class="right">—</td></tr>
+    <tr><td>Landing Fees</td><td class="right">—</td></tr>
+    <tr><td>Handling Fees</td><td class="right">—</td></tr>
+    <tr><td>Ground Service Fees</td><td class="right">—</td></tr>`;
+  document.getElementById('grandTotalCell').textContent='—';
+  document.getElementById('analyticsBody').innerHTML=`
+    <tr><td>Cost per NM</td><td class="right">—</td></tr>
+    <tr><td>Cost per Block Hour</td><td class="right">—</td></tr>
+    <tr><td>Fuel per NM</td><td class="right">—</td></tr>
+    <tr><td>Fuel per Block Hour</td><td class="right">—</td></tr>`;
+  document.getElementById('airportTBody').innerHTML='';
+  if(routeLayer) routeLayer.remove();
+  document.getElementById('calcBtn').style.display='inline-block';
+  document.getElementById('resetBtn').style.display='none';
+}
+
+// ===== Events =====
+document.getElementById('calcBtn').addEventListener('click', calculate);
+document.getElementById('resetBtn').addEventListener('click', resetCalc);
+document.getElementById('currency').addEventListener('change', ()=>{ if(lastResult) renderAll(); });
+
+</script>
+</body>
+</html>

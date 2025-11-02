@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aviation Operations Suite</title>
+  <link id="themeStylesheet" rel="stylesheet" href="style_skyblue.css" />
+</head>
+<body>
+<header>
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <h1>Aviation Operations Suite</h1>
+      <div class="subtitle">Unified tools for airline management, analytics, and charter operations</div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="themeToggleBtn" class="btn secondary" onclick="toggleTheme()">🎨 Switch to Gold Theme</button>
+    </div>
+  </div>
+</header>
+
+<div id="status-bar" class="muted" style="text-align:center;padding:8px;border-bottom:1px solid var(--border);">
+  <span id="status-airline">Airline Data: ⏳</span> | <span id="status-aircraft">Aircraft Data: ⏳</span>
+</div>
+
+<main class="wrap">
+  <div class="grid">
+    <div class="card"><div style="font-size:40px;">🧭</div><h2>Airline Manager</h2><p>Manage airline data.</p><button class="btn" onclick="window.location.href='airline_manager.html'">Open</button></div>
+    <div class="card"><div style="font-size:40px;">📊</div><h2>Analytics Dashboard</h2><p>Visualize airline performance.</p><button class="btn" onclick="window.location.href='airline_dashboard.html'">Open</button></div>
+    <div class="card"><div style="font-size:40px;">⚖️</div><h2>Flight Cost Calculator</h2><p>Estimate ACMI and fuel costs.</p><button class="btn" onclick="window.location.href='gc_calculator.html'">Open</button></div>
+    <div class="card"><div style="font-size:40px;">🧩</div><h2>Charter Match</h2><p>Match aircraft to charter requests.</p><button class="btn" onclick="window.location.href='charter_match.html'">Open</button></div>
+  </div>
+</main>
+
+<footer>Aviation Suite © 2025 — Data synced live</footer>
+
+<script>
+async function checkFile(name,id){
+  try {
+    const r=await fetch(name,{cache:'no-store'});
+    const el=document.getElementById(id);
+    if(r.ok){el.textContent=name+': ✅ Ready';el.style.color='var(--accent2)';}
+    else {el.textContent=name+': ⚠️ Not Found';el.style.color='var(--warn)';}
+  }catch(e){const el=document.getElementById(id);el.textContent=name+': ❌ Error';el.style.color='var(--warn)';}
+}
+checkFile('airlineData.json','status-airline');
+checkFile('aircraftData.json','status-aircraft');
+</script>
+<script src="themeToggle.js"></script>
+</body>
+</html>
