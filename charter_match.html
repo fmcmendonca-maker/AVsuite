@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Charter Match v1.3 — Multi‑Sector Planner</title>
+  <!-- Shared Aviation Suite styles -->
+  <link rel="stylesheet" href="style.css" />
+  <!-- Minimal fallback tokens so it still looks okay without full suite CSS -->
+  <style>
+    :root { --accent:#72e0a8; --muted:#96a0b5; }
+    .page { padding: 16px; }
+    .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .chip { padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15); opacity:.85; font-size:12px; }
+    .grid { display:grid; gap:16px; }
+    .grid-2 { grid-template-columns: 1.5fr 1fr; }
+    .tight td, .tight th { padding: 6px 8px; font-size: 13px; }
+    .right { text-align:right; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(127,155,200,.15); font-size:12px; }
+    .btn { cursor:pointer; }
+    .btn.secondary { background:transparent; border:1px solid rgba(127,155,200,.3); }
+    textarea { width: 100%; }
+  </style>
+</head>
+<body>
+  <!-- Top navigation consistent with suite -->
+  <header class="toolbar card">
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <a href="index.html" class="btn secondary">⟵ Main Menu</a>
+      <h1 style="margin:0; font-size:1.1rem">Charter Match — Multi‑Sector Planner <span class="pill">v1.3</span></h1>
+      <div style="display:flex; gap:6px; flex-wrap:wrap">
+        <span class="chip">External JSON</span>
+        <span class="chip">Multi‑Day</span>
+        <span class="chip">Auto Trip Name</span>
+        <span class="chip">Global PAX</span>
+        <span class="chip">Top 6/10/25</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center">
+      <button id="themeToggle" class="btn">🌓 Theme</button>
+    </div>
+  </header>
+
+  <main class="page grid grid-2">
+    <!-- Planner -->
+    <section class="card">
+      <h2 style="margin-top:0">Trip Planner</h2>
+
+      <!-- Global settings -->
+      <div class="card" style="padding:12px; margin-bottom:12px">
+        <div style="display:grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr; gap:12px;">
+          <div>
+            <label>Trip Name / Reference (auto‑fills from 1st leg)</label>
+            <input id="tripRef" placeholder="e.g., LHR → BCN" />
+          </div>
+          <div>
+            <label>Passengers (Global)</label>
+            <input id="globalPax" type="number" min="1" step="1" placeholder="e.g., 120" />
+            <small class="hint" style="color:var(--muted)">If set, used for all sectors.</small>
+          </div>
+          <div>
+            <label>Region</label>
+            <select id="region">
+              <option value="Europe" selected>Europe</option>
+              <option>Middle East</option>
+              <option>Africa</option>
+              <option>North America</option>
+              <option>South America</option>
+              <option>Asia</option>
+              <option>Oceania</option>
+            </select>
+          </div>
+          <div>
+            <label>Right‑size tolerance</label>
+            <select id="tolerance">
+              <option value="tight" selected>Strict (±10%)</option>
+              <option value="normal">Normal (±25%)</option>
+              <option value="loose">Loose (±40%)</option>
+            </select>
+          </div>
+          <div>
+            <label>Overnights (count)</label>
+            <input id="overnights" type="number" min="0" step="1" value="0" />
+          </div>
+          <div>
+            <label>Results</label>
+            <select id="limit">
+              <option value="6" selected>Top 6</option>
+              <option value="10">Top 10</option>
+              <option value="25">Top 25</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px">
+          <button id="run" class="btn">Find matches</button>
+          <button id="reset" class="btn secondary">Reset</button>
+        </div>
+      </div>
+
+      <!-- Sector list -->
+      <div class="card" style="padding:12px; margin-bottom:12px">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+          <h3 style="margin:4px 0 8px 0">Flight Sectors</h3>
+          <button id="addSector" class="btn" title="Add sector">➕ Add sector</button>
+        </div>
+        <table id="sectorTable" class="tight">
+          <thead>
+            <tr>
+              <th>From</th><th>To</th><th>Date</th><th>PAX</th><th>Block (hh:mm)</th><th class="right">Del</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <small class="hint" style="color:var(--muted)">Use realistic block time per sector. Distance removed by design.</small>
+      </div>
+
+      <!-- Results -->
+      <div class="grid" style="grid-template-columns:1fr 1fr; gap:12px">
+        <div class="card" style="padding:12px">
+          <h3 style="margin:4px 0 8px 0">Best Aircraft (cheapest overall)</h3>
+          <table id="acTable">
+            <thead>
+              <tr><th>Type</th><th>Seats</th><th>Sectors</th><th>Total BH</th><th>ACMI/hr</th><th class="right">Est. Cost</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <small class="hint" style="color:var(--muted)">Cost = ACMI/hr × Σ(sector BH) + overnights × (4 × ACMI/hr).</small>
+        </div>
+
+        <div class="card" style="padding:12px">
+          <h3 style="margin:4px 0 8px 0">Airlines To Contact</h3>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px">
+            <div id="airlineCount" class="pill">0 matches</div>
+            <label style="font-size:12px; color:var(--muted)"><input type="checkbox" id="showAllAirlines"> Show all</label>
+          </div>
+          <table id="alTable" class="tight">
+            <thead>
+              <tr><th></th><th>Airline</th><th>Base</th><th>Region</th><th>Fleet</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button id="compose" class="btn">Compose Email(s)</button>
+            <button id="copylist" class="btn secondary">Copy Emails</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="card" style="padding:12px; margin-top:12px">
+        <h3 style="margin:4px 0 8px 0">Email Template (auto‑filled)</h3>
+        <textarea id="emailBody" rows="10" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <!-- Notes -->
+    <aside class="card">
+      <h3 style="margin-top:0">How it works</h3>
+      <ul>
+        <li>Trip name auto‑fills from first sector (From → To) if left empty.</li>
+        <li>Global PAX applies to all sectors (overrides row PAX).</li>
+        <li>Right‑size by seat count within tolerance; widebodies allowed only if needed/allowed.</li>
+        <li>Filters airlines by region & matching fleet families.</li>
+      </ul>
+    </aside>
+  </main>
+
+  <footer class="card" style="border:0; border-top:1px solid rgba(127,155,200,.25); border-radius:0; margin:0; padding:16px 20px; opacity:.8">
+    © Charter Match v1.3 — Multi‑Sector Planner (integrated with Aviation Suite)
+  </footer>
+
+  <!-- Theme toggle (shared) -->
+  <script src="themetoggle.js"></script>
+
+  <script>
+  // ========= Theme integration =========
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn && typeof window.toggleTheme === 'function') {
+    themeBtn.addEventListener('click', () => window.toggleTheme());
+  } else if (themeBtn) {
+    themeBtn.addEventListener('click', () => document.body.classList.toggle('alt-theme'));
+  }
+
+  // ========= Robust data loading (always initialize UI) =========
+  let ACDB = {};
+  let AIRLINES = [];
+
+  (async function loadDataAndInit(){
+    // Try aircraftData.json
+    try {
+      const r = await fetch('aircraftData.json');
+      const j = await r.json();
+      ACDB = j.aircraft || {};
+    } catch (e) {
+      console.warn('aircraftData.json not loaded:', e);
+      alert('⚠️ Could not load aircraftData.json. The app will still render, but results may be empty.');
+      ACDB = {};
+    }
+
+    // Try airlineData.json (optional)
+    try {
+      const r = await fetch('airlineData.json');
+      const j = await r.json();
+      AIRLINES = j.airlines || [];
+    } catch (e) {
+      console.warn('airlineData.json not loaded (optional):', e);
+      AIRLINES = []; // proceed with zero airlines
+    }
+
+    initApp();
+  })();
+
+  // ========= App =========
+  function initApp(){
+    // Seat map and helpers
+    const SEATMAP = {
+      B733:148,B734:168,B735:132,B736:118,B737:140,B738:186,B739:204,
+      B744:416,B748:467,B752:200,B753:243,B762:216,B763:269,B772:314,B773:368,
+      B788:242,B789:290,
+      A318:120,A319:144,A320:180,A321:220,A332:272,A333:300,A343:277,A350:325,A388:520,
+      CRJ7:70,CRJ9:88,E170:76,E190:100
+    };
+    const WB = new Set(["B744","B748","B762","B763","B772","B773","B788","B789","A332","A333","A343","A350","A388"]);
+    const fmt = (n,d=0)=>Number(n).toLocaleString(undefined,{maximumFractionDigits:d, minimumFractionDigits:d});
+    const sectorTbody = document.querySelector('#sectorTable tbody');
+    const tripRefEl = document.getElementById('tripRef');
+    const globalPaxEl = document.getElementById('globalPax');
+
+    // --- Utilities
+    const hhmmToHours = (x)=>{ if(!x) return 0; const [h,m='0']=x.split(':'); return (+h||0)+(+m||0)/60; };
+    const pad2 = n => String(n).padStart(2,'0');
+
+    function addSectorRow(p={from:'',to:'',date:'',pax:'',block:'01:30'}){
+      const tr=document.createElement('tr');
+      tr.innerHTML = `
+        <td><input placeholder="From (IATA/ICAO)" value="${p.from}"></td>
+        <td><input placeholder="To (IATA/ICAO)" value="${p.to}"></td>
+        <td><input type="date" value="${p.date}"></td>
+        <td><input type="number" min="1" step="1" placeholder="e.g., 120" value="${p.pax}"></td>
+        <td><input placeholder="hh:mm" value="${p.block}"></td>
+        <td class="right"><button class="btn secondary" title="Delete">🗑️</button></td>`;
+      tr.querySelector('button').onclick = ()=>{ tr.remove(); autoTripName(); };
+      const [fromEl,toEl] = tr.querySelectorAll('input');
+      fromEl.oninput = autoTripName;
+      toEl.oninput = autoTripName;
+      sectorTbody.appendChild(tr);
+      autoTripName();
+    }
+
+    function getSectors(){
+      const rows = [...sectorTbody.querySelectorAll('tr')];
+      return rows.map(r=>{
+        const [fromEl,toEl,dateEl,paxEl,blockEl] = r.querySelectorAll('input');
+        const pax = globalPaxEl.value ? Number(globalPaxEl.value) : Number(paxEl.value||0);
+        return {
+          from:(fromEl.value||'').trim(),
+          to:(toEl.value||'').trim(),
+          date: dateEl.value || 'TBD',
+          pax,
+          bh: hhmmToHours(blockEl.value||'0:00'),
+          hhmm: blockEl.value||'0:00'
+        };
+      }).filter(s => s.from || s.to || s.pax || s.bh);
+    }
+
+    function autoTripName(){
+      if (tripRefEl.value && tripRefEl.value.trim()!=='') return;
+      const first = sectorTbody.querySelector('tr');
+      if (!first) return;
+      const [fromEl,toEl] = first.querySelectorAll('input');
+      const from = (fromEl?.value||'').trim() || '???';
+      const to = (toEl?.value||'').trim() || '???';
+      tripRefEl.value = `${from} → ${to}`;
+    }
+
+    // Seed default rows so "Flight Sectors" always exist
+    addSectorRow({from:'LHR',to:'BCN',pax:120,block:'01:50'});
+    addSectorRow({from:'BCN',to:'ORY',pax:120,block:'01:45'});
+
+    // --- Compute
+    function compute(){
+      const sectors = getSectors();
+      const acBody = document.querySelector('#acTable tbody');
+      const alBody = document.querySelector('#alTable tbody');
+      if (!sectors.length){
+        acBody.innerHTML='';
+        alBody.innerHTML='';
+        document.getElementById('airlineCount').textContent = '0 shown / 0 found';
+        document.getElementById('emailBody').value='';
+        return;
+      }
+      autoTripName();
+
+      const region = document.getElementById('region').value;
+      const tol = document.getElementById('tolerance').value;
+      const tolPct = tol==='tight'?0.10 : tol==='normal'?0.25 : 0.40;
+      const overnights = Number(document.getElementById('overnights').value||0);
+      const limit = Number(document.getElementById('limit').value||6);
+      const showAll = document.getElementById('showAllAirlines').checked;
+
+      const maxPax = Math.max(...sectors.map(s=>s.pax||0));
+      const totalBH = sectors.reduce((a,s)=>a+(s.bh||0),0);
+
+      // Aircraft ranking
+      const rows=[];
+      for (const [type,d] of Object.entries(ACDB)){
+        const seats = SEATMAP[type]; if(!seats) continue;
+        const belowAny = sectors.some(s=> seats < (s.pax||0));
+        if (belowAny) continue;
+        const exceedsUpper = sectors.some(s=> seats > Math.ceil((s.pax||0)*(1+tolPct)));
+        if (exceedsUpper && !WB.has(type)) continue;
+
+        const acmi = d.acmiRate||0;
+        const est = acmi*totalBH + (overnights>0 ? acmi*4*overnights : 0);
+        rows.push({type, model:d.model, seats, acmi, est, tripBH: totalBH});
+      }
+      rows.sort((a,b)=>a.est-b.est);
+
+      // Render aircraft
+      acBody.innerHTML = rows.slice(0,limit).map(r=>`
+        <tr>
+          <td><b>${r.type}</b><div class="pill" style="margin-top:4px">${r.model||''}</div></td>
+          <td>${r.seats||'-'}</td>
+          <td>${sectors.length}</td>
+          <td>${fmt(r.tripBH,2)}</td>
+          <td>€${fmt(r.acmi)}</td>
+          <td class="right"><b>€${fmt(r.est,0)}</b></td>
+        </tr>`).join('');
+
+      // Airline matching — Option B (limit to Top X with Show all override)
+      const familiesTop = new Set(rows.slice(0,Math.max(limit,8)).map(r=>r.type.slice(0,3)));
+      const band = maxPax<=100?'small' : maxPax<=230?'narrow' : 'wide';
+      const bandFamilies = band==='small' ? ['E17','E19','CRJ','A31','B73']
+                          : band==='narrow'? ['A32','B73','B75']
+                          : ['A33','A34','A35','B76','B77','B78','B74'];
+
+      const allMatches = (AIRLINES||[]).filter(a=>{
+        if (a.region !== region) return false;
+        const fs = (a.fleet||[]).join(' ');
+        const hasFam = [...familiesTop].some(f=>fs.includes(f));
+        const hasBand = bandFamilies.some(f=>fs.includes(f));
+        return hasFam || hasBand;
+      });
+
+      const shown = showAll ? allMatches : allMatches.slice(0,limit);
+
+      alBody.innerHTML = shown.map(a=>`
+        <tr>
+          <td><input type="checkbox" data-mail="${a.email||''}" checked></td>
+          <td><b>${a.name||''}</b><div class="pill" style="margin-top:4px">${a.email||''}</div></td>
+          <td>${a.base||''}</td>
+          <td>${a.region||''}</td>
+          <td>${(a.fleet||[]).join(', ')}</td>
+        </tr>`).join('');
+      document.getElementById('airlineCount').textContent = `${shown.length} shown / ${allMatches.length} found`;
+
+      // Email
+      const best = rows[0];
+      const lines = sectors.map((s,i)=>`${i+1}) ${s.from||'???'} → ${s.to||'???'} | ${s.date} | ${s.pax} pax | ${s.hhmm}`).join('\n');
+      document.getElementById('emailBody').value =
+`Hello Charter/ACMI Team,
+
+We request availability and pricing for the following trip (${tripRefEl.value || 'TBD'}):
+
+${lines}
+
+Preferred operator region: ${region}
+Right-size tolerance: ${tol==='tight'?'Strict (±10%)': tol==='normal'?'Normal (±25%)':'Loose (±40%)'}
+Overnights: ${overnights}
+
+Best overall aircraft suggestion (by estimated ACMI cost):
+• ${best ? `${best.model||best.type} (${best.type}) — ${best.seats} seats, total BH ~ ${fmt(best.tripBH,2)}, ACMI/hr €${fmt(best.acmi)}, est. trip cost €${fmt(best.est,0)}` : 'No suitable suggestion with current inputs'}
+
+Please confirm for each sector:
+1) Aircraft type/config & availability
+2) Price (ACMI/charter) and inclusions
+3) Positioning/ferry needs
+4) Payment terms & deadline
+5) Operational notes (slots, permits, MEL, etc.)
+
+Thank you,
+[Your Name]
+[Company]`;
+    }
+
+    // Compose + copy
+    function composeEmails(){
+      const sel=[...document.querySelectorAll('#alTable input[type=checkbox]:checked')];
+      if(!sel.length){alert('Select at least one airline.');return;}
+      const bcc = sel.map(x=>x.dataset.mail).filter(Boolean).join(',');
+      const subj=encodeURIComponent('Availability Request — Multi-sector Charter/ACMI');
+      const body=encodeURIComponent(document.getElementById('emailBody').value);
+      location.href=`mailto:?bcc=${encodeURIComponent(bcc)}&subject=${subj}&body=${body}`;
+    }
+    function copyEmails(){
+      const sel=[...document.querySelectorAll('#alTable input[type=checkbox]:checked')];
+      if(!sel.length){alert('Select at least one airline.');return;}
+      const list = sel.map(x=>x.dataset.mail).filter(Boolean).join(', ');
+      navigator.clipboard.writeText(list).then(()=>alert('Email list copied.'));
+    }
+
+    // Wire up
+    document.getElementById('addSector').onclick = ()=> addSectorRow({});
+    document.getElementById('reset').onclick = ()=>{
+      sectorTbody.innerHTML='';
+      addSectorRow({from:'LHR',to:'BCN',pax:120,block:'01:50'});
+      addSectorRow({from:'BCN',to:'ORY',pax:120,block:'01:45'});
+      document.getElementById('region').value='Europe';
+      document.getElementById('tolerance').value='tight';
+      document.getElementById('overnights').value='0';
+      document.getElementById('limit').value='6';
+      document.getElementById('globalPax').value='';
+      document.getElementById('tripRef').value='';
+      document.getElementById('showAllAirlines').checked=false;
+      compute();
+    };
+    document.getElementById('run').onclick = compute;
+    document.getElementById('compose').onclick = composeEmails;
+    document.getElementById('copylist').onclick = copyEmails;
+    document.getElementById('limit').onchange = compute;
+    document.getElementById('region').onchange = compute;
+    document.getElementById('tolerance').onchange = compute;
+    document.getElementById('overnights').oninput = compute;
+    document.getElementById('showAllAirlines').onchange = compute;
+    globalPaxEl.oninput = compute;
+
+    // First compute
+    compute();
+  }
+  </script>
+</body>
+</html>
+
